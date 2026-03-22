@@ -24,6 +24,18 @@ Global saved variable table, persisted between sessions by the WoW client. Initi
 
 ---
 
+## Non-Persisted Runtime State
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `WGLU.DebugMode` | boolean | `false` | Debug mode toggle. Resets to `false` each session (not saved to `WhoGotLootsSavedData`). When `true`, shows the debug overlay with cache queue and scrollable debug log. Toggled via `/wgl debug`. |
+| `WGLU.DebugLog` | table (array) | `{}` | Array of timestamped debug log strings. Capped at `WGLU.DebugLogMaxEntries` (100). Cleared on reload. |
+| `WGLU.DebugLogMaxEntries` | number | `100` | Maximum number of entries in the debug log before oldest are discarded. |
+| `WGLU.DebugLogText` | FontString | `nil` | Reference to the debug frame's log FontString, set by `CacheHandler.lua` at load. |
+| `WGLU.DebugLogScrollFrame` | ScrollFrame | `nil` | Reference to the debug frame's ScrollFrame, set by `CacheHandler.lua` at load. |
+
+---
+
 ## WhoLootData (Runtime State)
 
 Global runtime state table, created in `WhoGotLoots.lua`.

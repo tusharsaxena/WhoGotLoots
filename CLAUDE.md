@@ -68,8 +68,12 @@ Load order matters — later files depend on namespaces from earlier ones.
 
 There is no automated test framework. Testing is done in-game:
 - `/wgl` — toggle the main window
-- `/wgl add [itemLink|itemID]` — manually inject a loot item for testing
-- `/wgl debug` — toggle debug mode (verbose chat output + cache overlay)
+- `/wgl test [itemLink|itemID]` — inject a test loot item
+- `/wgl debug` — toggle debug mode (resets every session, default OFF). When enabled:
+  - Shows a movable debug overlay (centered on screen, drag to reposition) with two sections:
+    - **Cache Queue** (top): real-time inspection request status
+    - **Debug Log** (bottom, scrollable): timestamped pipeline messages (item load, filtering, slot resolution, equip checks, stat diffs, cache requests)
+- `/wgl help` — show available commands
 
 ## Docs
 

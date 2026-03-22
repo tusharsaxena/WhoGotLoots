@@ -1,5 +1,7 @@
 WGLU = {}
 WGLU.DebugMode = false
+WGLU.DebugLog = {}
+WGLU.DebugLogMaxEntries = 100
 
  function WGLU.GetPlayerMainStat()
     local stats = {
@@ -145,7 +147,32 @@ function WGLU.GetPlayerUnitByGUID(guid)
 end
 
 function WGLU.DebugPrint(message)
-  if WGLU.DebugMode then print(message) end
+  if WGLU.DebugMode then
+    local timestamp = date("%H:%M:%S")
+    local line = "|cFFAAAAAA" .. timestamp .. "|r " .. tostring(message)
+    WGLU.AddDebugLog(line)
+  end
+end
+
+function WGLU.AddDebugLog(line)
+  table.insert(WGLU.DebugLog, line)
+  if #WGLU.DebugLog > WGLU.DebugLogMaxEntries then
+    table.remove(WGLU.DebugLog, 1)
+  end
+  -- Update the debug frame if it exists
+  if WGLU.DebugLogText then
+    WGLU.DebugLogText:SetText(table.concat(WGLU.DebugLog, "\n"))
+    -- Resize scroll child to fit text content
+    if WGLU.DebugLogScrollChild then
+      WGLU.DebugLogScrollChild:SetHeight(WGLU.DebugLogText:GetStringHeight() + 10)
+    end
+    -- Defer auto-scroll to next frame (scroll range updates one frame later)
+    if WGLU.DebugLogScrollFrame then
+      C_Timer.After(0, function()
+        WGLU.DebugLogScrollFrame:SetVerticalScroll(WGLU.DebugLogScrollFrame:GetVerticalScrollRange())
+      end)
+    end
+  end
 end
 
 -- Determine if an item has the specified mainstat.

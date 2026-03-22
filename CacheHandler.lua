@@ -12,20 +12,105 @@ WGLCacheCacheStage = {
     Finished = 3, -- The item has been received. This will only show if for some reason something broke with handling the item.
     Failed = 4    -- The inspect failed.
 }
--- Create a debug frame that shows our cache requests.
+-- Create a debug frame with two sections: Cache Queue (top) and Debug Log (bottom).
 CacheDebugFrame = CreateFrame("Frame", "WGLCacheDebugFrame", UIParent)
-CacheDebugFrame:SetSize(300, 200)
-CacheDebugFrame:SetPoint("TOPLEFT", 100, -100)
--- CacheDebugFrame:Hide()
+CacheDebugFrame:SetSize(400, 450)
+CacheDebugFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+CacheDebugFrame:SetMovable(true)
+CacheDebugFrame:EnableMouse(true)
+CacheDebugFrame:RegisterForDrag("LeftButton")
+CacheDebugFrame:SetClampedToScreen(true)
+CacheDebugFrame:SetScript("OnDragStart", CacheDebugFrame.StartMoving)
+CacheDebugFrame:SetScript("OnDragStop", CacheDebugFrame.StopMovingOrSizing)
+CacheDebugFrame:SetFrameStrata("HIGH")
+CacheDebugFrame:SetResizable(true)
+CacheDebugFrame:SetResizeBounds(250, 200, 800, 800)
+CacheDebugFrame:Hide()
+
+-- Resize grip at bottom-right corner
+local resizeGrip = CreateFrame("Button", nil, CacheDebugFrame)
+resizeGrip:SetSize(16, 16)
+resizeGrip:SetPoint("BOTTOMRIGHT", 0, 0)
+resizeGrip:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
+resizeGrip:SetHighlightTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Highlight")
+resizeGrip:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Down")
+resizeGrip:RegisterForDrag("LeftButton")
+resizeGrip:SetScript("OnDragStart", function() CacheDebugFrame:StartSizing("BOTTOMRIGHT") end)
+resizeGrip:SetScript("OnDragStop", function() CacheDebugFrame:StopMovingOrSizing() end)
 
 CacheDebugFrame.BG = CacheDebugFrame:CreateTexture(nil, "BACKGROUND")
 CacheDebugFrame.BG:SetAllPoints()
-CacheDebugFrame.BG:SetColorTexture(0, 0, 0, 0.5)
+CacheDebugFrame.BG:SetColorTexture(0, 0, 0, 0.7)
 
-CacheDebugFrame.Text = CacheDebugFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-CacheDebugFrame.Text:SetPoint("TOPLEFT", 10, -10)
-CacheDebugFrame.Text:SetText("Cache Requests")
+-- Top section: Cache Queue
+CacheDebugFrame.Title = CacheDebugFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+CacheDebugFrame.Title:SetPoint("TOPLEFT", 10, -10)
+CacheDebugFrame.Title:SetText("|cFF00CCFFWGL Debug|r")
+CacheDebugFrame.Title:SetJustifyH("LEFT")
+
+CacheDebugFrame.CacheLabel = CacheDebugFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+CacheDebugFrame.CacheLabel:SetPoint("TOPLEFT", 10, -28)
+CacheDebugFrame.CacheLabel:SetText("|cFFFFFF00Cache Queue|r")
+CacheDebugFrame.CacheLabel:SetJustifyH("LEFT")
+
+-- Scroll frame for cache queue (5 lines high)
+local cacheScrollFrame = CreateFrame("ScrollFrame", "WGLCacheQueueScrollFrame", CacheDebugFrame, "UIPanelScrollFrameTemplate")
+cacheScrollFrame:SetPoint("TOPLEFT", 10, -44)
+cacheScrollFrame:SetPoint("RIGHT", CacheDebugFrame, "RIGHT", -30, 0)
+cacheScrollFrame:SetHeight(60)
+
+local cacheScrollChild = CreateFrame("Frame", nil, cacheScrollFrame)
+cacheScrollChild:SetSize(340, 1)
+cacheScrollFrame:SetScrollChild(cacheScrollChild)
+
+CacheDebugFrame.Text = cacheScrollChild:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+CacheDebugFrame.Text:SetPoint("TOPLEFT", 0, 0)
+CacheDebugFrame.Text:SetPoint("RIGHT", cacheScrollChild, "RIGHT", 0, 0)
+CacheDebugFrame.Text:SetText("")
 CacheDebugFrame.Text:SetJustifyH("LEFT")
+CacheDebugFrame.Text:SetWordWrap(true)
+
+CacheDebugFrame.CacheScrollChild = cacheScrollChild
+
+-- Divider line
+CacheDebugFrame.Divider = CacheDebugFrame:CreateTexture(nil, "ARTWORK")
+CacheDebugFrame.Divider:SetHeight(1)
+CacheDebugFrame.Divider:SetPoint("LEFT", 10, 0)
+CacheDebugFrame.Divider:SetPoint("RIGHT", -10, 0)
+CacheDebugFrame.Divider:SetPoint("TOP", 0, -110)
+CacheDebugFrame.Divider:SetColorTexture(0.4, 0.4, 0.4, 0.8)
+
+-- Bottom section: Debug Log
+CacheDebugFrame.LogLabel = CacheDebugFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+CacheDebugFrame.LogLabel:SetPoint("TOPLEFT", 10, -118)
+CacheDebugFrame.LogLabel:SetText("|cFFFFFF00Debug Log|r")
+CacheDebugFrame.LogLabel:SetJustifyH("LEFT")
+
+-- Scroll frame for debug log
+local scrollFrame = CreateFrame("ScrollFrame", "WGLDebugLogScrollFrame", CacheDebugFrame, "UIPanelScrollFrameTemplate")
+scrollFrame:SetPoint("TOPLEFT", 10, -134)
+scrollFrame:SetPoint("BOTTOMRIGHT", -30, 10)
+
+local scrollChild = CreateFrame("Frame", nil, scrollFrame)
+scrollChild:SetSize(360, 1)
+scrollFrame:SetScrollChild(scrollChild)
+
+local logText = scrollChild:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+logText:SetPoint("TOPLEFT", 0, 0)
+logText:SetPoint("RIGHT", scrollChild, "RIGHT", 0, 0)
+logText:SetJustifyH("LEFT")
+logText:SetWordWrap(true)
+logText:SetText("")
+
+-- Keep scroll child width in sync when frame is resized
+scrollFrame:SetScript("OnSizeChanged", function(self, width, height)
+	scrollChild:SetWidth(width)
+end)
+
+-- Store references for WGLU.AddDebugLog to use
+WGLU.DebugLogText = logText
+WGLU.DebugLogScrollFrame = scrollFrame
+WGLU.DebugLogScrollChild = scrollChild
 
 
 -- This is called when an item that another player is wearing hasn't been cached by the client.
@@ -232,22 +317,22 @@ function UpdateQueueDebugList()
         end
     end
 
-    CacheDebugFrame.Text:SetText("Cache Requests")
-    local i = 1
+    local cacheLines = {}
     for ID, request in pairs(WGL_Request_Debug_Cache) do
-        local text = "|cFFFFFFFFUnit:|r " .. request.UnitName .. ", |cFFFFFFFFItemLoc:|r " .. request.ItemLocation .. ", |cFFFFFFFFILevel:|r " .. request.ItemLevel
         local stageNames = {
-            [WGLCacheCacheStage.Sent] = "Sent",
-            [WGLCacheCacheStage.Queued] = "Queued",
-            [WGLCacheCacheStage.Finished] = "Finished"
+            [WGLCacheCacheStage.Sent] = "|cFFFFFF00Sent|r",
+            [WGLCacheCacheStage.Queued] = "|cFFAAAAAQueued|r",
+            [WGLCacheCacheStage.Finished] = "|cFF00FF00Finished|r"
         }
         local stageName = stageNames[request.QueryStage] or "Unknown"
-        text = text .. "\n - |cFFFFFFFFStage:|r " .. stageName
-        CacheDebugFrame.Text:SetText(CacheDebugFrame.Text:GetText() .. "\n" .. text)
-        i = i + 1
+        local text = "|cFFFFFFFFUnit:|r " .. request.UnitName .. " |cFFFFFFFFSlot:|r " .. request.ItemLocation .. " |cFFFFFFFFilvl:|r " .. request.ItemLevel .. " |cFFFFFFFFStage:|r " .. stageName
+        table.insert(cacheLines, text)
 
         request.Time = request.Time + WGLCache_Frequency
     end
+    local cacheText = #cacheLines > 0 and table.concat(cacheLines, "\n") or "|cFF666666(empty)|r"
+    CacheDebugFrame.Text:SetText(cacheText)
+    CacheDebugFrame.CacheScrollChild:SetHeight(CacheDebugFrame.Text:GetStringHeight() + 4)
 
     -- Remove any entries whose time is above 20 seconds.
     for ID, request in pairs(WGL_Request_Debug_Cache) do

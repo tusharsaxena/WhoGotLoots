@@ -17,13 +17,13 @@
 ```
 WhoGotLoots/
 ├── WhoGotLoots.toc          # Addon manifest
-├── WhoGotLoots.lua           # Core event handling & loot processing (843 lines)
+├── WhoGotLoots.lua           # Core event handling & loot processing (877 lines)
 ├── UIBuilder.lua             # UI framework & main frame creation (974 lines)
 ├── ItemBox.lua               # Item frame pool manager (307 lines)
-├── CacheHandler.lua          # Async player inspection queue (268 lines)
+├── CacheHandler.lua          # Async player inspection queue (353 lines)
 ├── ItemsDB.lua               # Class/spec gear compatibility DB (577 lines)
 ├── OptionsMenu.lua           # Settings panel UI (394 lines)
-├── util.lua                  # Shared utility functions (200 lines)
+├── util.lua                  # Shared utility functions (226 lines)
 ├── Localization.lua          # i18n strings (23 lines)
 ├── Art/
 │   ├── Fonts.xml             # 7 virtual font definitions

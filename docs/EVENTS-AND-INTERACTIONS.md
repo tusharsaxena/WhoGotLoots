@@ -246,8 +246,33 @@ Registered as `SLASH_WHOLOOT1` (`/whogotloots`) and `SLASH_WHOLOOT2` (`/wgl`).
 | Command | Action |
 |---------|--------|
 | `/wgl` (no args) | Toggle main window visibility |
-| `/wgl add [itemLink\|itemID]` | Manually add an item. Uses current target as the "looter", or player if no target. Accepts both full item links and numeric item IDs. |
-| `/wgl debug` | Toggle debug mode. When enabled, prints detailed processing info to chat and shows the cache debug overlay. |
+| `/wgl test [itemLink\|itemID]` | Inject a test loot item. Uses current target as the "looter", or player if no target. Accepts both full item links and numeric item IDs. |
+| `/wgl debug` | Toggle debug mode (not persisted, resets each session). Shows a movable debug overlay centered on screen with two sections: cache queue and scrollable debug log. |
+| `/wgl help` | Print available commands to chat. |
+
+### Debug Mode Output
+
+When debug mode is active, a two-section debug overlay appears (400x450, centered, draggable):
+
+**Top section — Cache Queue**: Real-time inspection request status with unit name, slot, ilvl, and stage (Sent/Queued/Finished). Entries expire after 60 seconds.
+
+**Bottom section — Debug Log** (scrollable): Timestamped messages logged at each stage of loot processing:
+
+| Stage | Output |
+|-------|--------|
+| **CHAT_MSG_LOOT** | Raw event args (message, player name) |
+| **Item loaded** | Item name, quality, ilvl, type/subtype, equip location, classID |
+| **Filtering** | Reason for skipping (quality too low, not armor/weapon, cosmetic, own loot, raid/LFR settings, unequippable) |
+| **Equip check** | CanEquip, IsAppropriate, HasMainStat, player class and main stat |
+| **Slot resolution** | Target slot ID and why (neck special case, ring/trinket lowest comparison, transmog lookup) |
+| **Equipped item** | Current item link and ilvl in the resolved slot |
+| **BoP status** | Bind-on-pickup detection |
+| **Other player** | Whether their gear was cached or queued for async inspection |
+| **Stat diffs** | ilvl diff, main stat diff, count of positive/negative secondary stats |
+| **Cache request** | Slot, ilvl, itemID, request ID |
+| **Frame pool** | Frame acquisition status, active/available counts |
+
+The debug log is capped at 100 entries and auto-scrolls to the latest message.
 
 ---
 

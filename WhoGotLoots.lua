@@ -146,6 +146,10 @@ function AddLootFrame(player, CompareItemLink)
         return
     end
 
+    if WGLU.DebugMode then
+        WGLU.AddDebugLog(" ")
+        WGLU.AddDebugLog("|cFF555555——————————————————————————————|r")
+    end
     WGLU.DebugPrint("Processing loot for player: " .. tostring(player) .. ", item: " .. tostring(CompareItemLink))
     WGLU.DebugPrint("Frame pool status: Active=" ..
     #WhoLootData.ActiveFrames ..
@@ -156,7 +160,10 @@ function AddLootFrame(player, CompareItemLink)
     if string.find(player, "-") then player = string.match(player, "(.*)-") end
 
     -- If it was our loot, don't show the frame.
-    if UnitIsUnit('player', player) and WhoGotLootsSavedData.ShowOwnLoot ~= true then return end
+    if UnitIsUnit('player', player) and WhoGotLootsSavedData.ShowOwnLoot ~= true then
+        WGLU.DebugPrint("Filtered: own loot (ShowOwnLoot=false)")
+        return
+    end
 
     -- If the player was "target" (this should only be for debugging) resolve it to a party member number.
     if player == "target" then
@@ -175,6 +182,7 @@ function AddLootFrame(player, CompareItemLink)
     local isInRaid = IsPlayerInRaidInstance()
     if (WhoGotLootsSavedData.ShowDuringRaid ~= true and isInRaid) or
         (isInRaid and WhoGotLootsSavedData.ShowDuringRaid == true and WhoGotLootsSavedData.ShowDuringLFR ~= true and IsRaidLFR()) then
+        WGLU.DebugPrint("Filtered: raid/LFR visibility settings (ShowDuringRaid=" .. tostring(WhoGotLootsSavedData.ShowDuringRaid) .. ", ShowDuringLFR=" .. tostring(WhoGotLootsSavedData.ShowDuringLFR) .. ")")
         return
     end
 
@@ -236,7 +244,7 @@ function AddLootFrame(player, CompareItemLink)
         if tonumber(CompareItemLink) then CompareItemLink = tonumber(CompareItemLink) end
     end
 
-    -- If itemLink is just an ID, then it came from a debug command, and we need to convert it to a proper item link.
+    -- If itemLink is just an ID, then it came from a test command, and we need to convert it to a proper item link.
     -- We need to create an Item object to get the item level.
     local CompareItem
     if type(CompareItemLink) == "number" then CompareItem = Item:CreateFromItemID(CompareItemLink) end
@@ -250,13 +258,24 @@ function AddLootFrame(player, CompareItemLink)
 
         if type(CompareItemLink) == "number" then CompareItemLink = linkedItem end
 
-        if itemQuality < WhoGotLootsSavedData.MinQuality then return end
+        WGLU.DebugPrint("Item loaded: " .. tostring(itemName) .. " | Quality: " .. tostring(itemQuality) .. " (" .. WGLU.ItemQualityToText(itemQuality) .. ") | ilvl: " .. tostring(CompareItemIlvl) .. " | Type: " .. tostring(itemType) .. "/" .. tostring(itemSubType) .. " | EquipLoc: " .. tostring(itemEquipLoc) .. " | ClassID: " .. tostring(classID) .. "/" .. tostring(subclassID))
+
+        if itemQuality < WhoGotLootsSavedData.MinQuality then
+            WGLU.DebugPrint("Filtered: quality " .. tostring(itemQuality) .. " < minimum " .. tostring(WhoGotLootsSavedData.MinQuality))
+            return
+        end
 
         -- We only worry about armor and weapons.
-        if classID ~= Enum.ItemClass.Armor and classID ~= Enum.ItemClass.Weapon then return end
+        if classID ~= Enum.ItemClass.Armor and classID ~= Enum.ItemClass.Weapon then
+            WGLU.DebugPrint("Filtered: classID " .. tostring(classID) .. " is not Armor or Weapon")
+            return
+        end
 
         -- Is it a cosmetic item?
-        if C_Item.IsCosmeticItem(CompareItemID) then return end
+        if C_Item.IsCosmeticItem(CompareItemID) then
+            WGLU.DebugPrint("Filtered: item is cosmetic")
+            return
+        end
 
         -- Grab the player's main stat.
         local PlayerTopStat = WGLU.GetPlayerMainStat()
@@ -266,8 +285,13 @@ function AddLootFrame(player, CompareItemLink)
         local IsAppropriate = WGLItemsDB.IsAppropriate(CompareItemID, select(2, UnitClass("player")))
         local ItemHasMainStat = WGLU.ItemHasMainStat(CompareItemLink, PlayerTopStat)
 
+        WGLU.DebugPrint("Equip check: CanEquip=" .. tostring(CanEquip) .. ", IsAppropriate=" .. tostring(IsAppropriate) .. ", HasMainStat=" .. tostring(ItemHasMainStat) .. " (PlayerStat=" .. tostring(PlayerTopStat) .. ", Class=" .. tostring(select(2, UnitClass("player"))) .. ")")
+
         -- If we don't want to show unequippable items, and this item is not equippable, return.
-        if WhoGotLootsSavedData.HideUnequippable == true and not UnitIsUnit('player', player) and (CanEquip == false or IsAppropriate == false or ItemHasMainStat == false) then return end
+        if WhoGotLootsSavedData.HideUnequippable == true and not UnitIsUnit('player', player) and (CanEquip == false or IsAppropriate == false or ItemHasMainStat == false) then
+            WGLU.DebugPrint("Filtered: unequippable/inappropriate item (HideUnequippable=true)")
+            return
+        end
 
         -- Get currently equipped item information
         local CurrentSlotID = -1
@@ -275,14 +299,18 @@ function AddLootFrame(player, CompareItemLink)
         -- Necks don't have a transmog slot, rings and trinkets will be handled below.
         if itemEquipLoc == "INVTYPE_NECK" then
             CurrentSlotID = 2
+            WGLU.DebugPrint("Slot resolution: INVTYPE_NECK -> slot 2")
         else
             CurrentSlotID = C_Transmog.GetSlotForInventoryType(C_Item.GetItemInventoryTypeByID(CompareItemID) + 1)
+            WGLU.DebugPrint("Slot resolution: " .. tostring(itemEquipLoc) .. " -> slot " .. tostring(CurrentSlotID))
         end
 
         -- Prepare comparison data
         local CurrentItemLink = GetInventoryItemLink("player", CurrentSlotID)
         local CurrentItemIlvl = CurrentItemLink and
         C_Item.GetCurrentItemLevel(ItemLocation:CreateFromEquipmentSlot(CurrentSlotID)) or 0
+
+        WGLU.DebugPrint("Equipped in slot " .. tostring(CurrentSlotID) .. ": " .. tostring(CurrentItemLink) .. " (ilvl " .. tostring(CurrentItemIlvl) .. ")")
 
         local IsBoP = false
         local IsUnique = false
@@ -303,6 +331,7 @@ function AddLootFrame(player, CompareItemLink)
         if C_Item.IsItemBindToAccountUntilEquip(CompareItemLink) then
             IsBoP = true
             NoCompare = not UnitIsUnit('player', player)
+            WGLU.DebugPrint("Item is BoP (bind-to-account-until-equip), NoCompare=" .. tostring(NoCompare))
         end
 
         -- -----------------------------------------------------------------------------------------------------------
@@ -310,8 +339,10 @@ function AddLootFrame(player, CompareItemLink)
 
         if itemEquipLoc == "INVTYPE_TRINKET" then
             CurrentItemLink, CurrentItemIlvl, CurrentSlotID = GetLowestItemBetween(CompareItemID, CompareItemIlvl, 13, 14)
+            WGLU.DebugPrint("Trinket comparison: using lowest of slots 13/14 -> slot " .. tostring(CurrentSlotID) .. " (ilvl " .. tostring(CurrentItemIlvl) .. ")")
         elseif itemEquipLoc == "INVTYPE_FINGER" then
             CurrentItemLink, CurrentItemIlvl, CurrentSlotID = GetLowestItemBetween(CompareItemID, CompareItemIlvl, 11, 12)
+            WGLU.DebugPrint("Ring comparison: using lowest of slots 11/12 -> slot " .. tostring(CurrentSlotID) .. " (ilvl " .. tostring(CurrentItemIlvl) .. ")")
         end
 
         -- Check the tooltip to see if it's class restricted.
@@ -350,14 +381,11 @@ function AddLootFrame(player, CompareItemLink)
                         "|r")
                 end
             else
+                WGLU.DebugPrint("Other player gear not cached for " .. tostring(player) .. " slot " .. tostring(CurrentSlotID) .. " - queuing async inspection")
                 CacheRequest = { ["ItemLocation"] = CurrentSlotID, ["ItemLevel"] = CompareItemIlvl, ["ItemID"] =
                 CompareItemID }
             end
         end
-
-        WGLU.DebugPrint("CanEquip = " ..
-        tostring(CanEquip) ..
-        ", IsAppropriate = " .. tostring(IsAppropriate) .. ", ItemHasMainStat = " .. tostring(ItemHasMainStat))
 
         -- If we can equip this item, check if it's an upgrade.
         if CanEquip == true and IsAppropriate == true and ItemHasMainStat == true and IsClassRestricted ~= true then
@@ -522,12 +550,10 @@ function AddLootFrame(player, CompareItemLink)
                 for _, statText in ipairs(negativeStats) do
                     table.insert(SecondaryStatsLine, statText)
                 end
+
+                WGLU.DebugPrint("Stat diffs: ilvlDiff=" .. tostring(ilvlDiff) .. ", mainStatDiff=" .. tostring(diffStat) .. " " .. tostring(PlayerTopStat) .. ", positive=" .. #positiveStats .. ", negative=" .. #negativeStats)
             end
         end
-
-        WGLU.DebugPrint("CanEquip: " ..
-        tostring(CanEquip) ..
-        ", IsAppropriate: " .. tostring(IsAppropriate) .. ", ItemHasMainStat: " .. tostring(ItemHasMainStat))
 
         -- Display why we can't equip the item.
         if CanEquip == false then
@@ -571,6 +597,7 @@ function AddLootFrame(player, CompareItemLink)
                 CacheRequest.IsUpgrade = CompareItemIlvl > CurrentItemIlvl
                 CacheRequest.TextString = table.concat(PriorityStatsLine, " | ")
                 frame.QueuedRequest = WGLCache.CreateRequest(player, CacheRequest)
+                WGLU.DebugPrint("Cache request created: slot=" .. tostring(CacheRequest.ItemLocation) .. ", ilvl=" .. tostring(CacheRequest.ItemLevel) .. ", itemID=" .. tostring(CacheRequest.ItemID) .. ", requestID=" .. tostring(frame.QueuedRequest))
                 frame.LoadingIcon:Unhide()
             else
                 frame.LoadingIcon:Hide()
@@ -828,7 +855,7 @@ SlashCmdList["WHOLOOT"] = function(msg)
     local cmd = args[1]
     table.remove(args, 1)
 
-    if cmd == "add" then
+    if cmd == "test" then
         -- Are we targeting someone right now?
         if UnitExists("target") then
             AddLootFrame("target", args[1])
@@ -838,6 +865,13 @@ SlashCmdList["WHOLOOT"] = function(msg)
         end
     elseif cmd == "debug" then
         WGLU.DebugMode = not WGLU.DebugMode
-        print("Debug mode is now " .. (WGLU.DebugMode and "enabled" or "disabled"))
+        if WGLU.DebugMode then CacheDebugFrame:Show() else CacheDebugFrame:Hide() end
+        print("|cFF00CCFFWho Got Loots|r - Debug mode is now " .. (WGLU.DebugMode and "|cFF00FF00enabled|r" or "|cFFFF0000disabled|r"))
+    elseif cmd == "help" then
+        print("|cFF00CCFFWho Got Loots|r - Commands:")
+        print("  |cFFFFFF00/wgl|r - Toggle the main window")
+        print("  |cFFFFFF00/wgl test [itemLink|itemID]|r - Inject a test loot item")
+        print("  |cFFFFFF00/wgl debug|r - Toggle debug mode (debug overlay)")
+        print("  |cFFFFFF00/wgl help|r - Show this help message")
     end
 end

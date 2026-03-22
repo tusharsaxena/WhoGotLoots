@@ -32,8 +32,9 @@ A World of Warcraft addon that tracks and displays looted items in your party or
 | Command | Action |
 |---------|--------|
 | `/wgl` or `/whogotloots` | Toggle the main window |
-| `/wgl add [itemLink]` | Manually add an item for testing |
-| `/wgl debug` | Toggle debug mode |
+| `/wgl test [itemLink]` | Inject a test loot item |
+| `/wgl debug` | Toggle debug mode (shows debug overlay with cache queue and processing log) |
+| `/wgl help` | Show available commands |
 
 Hover over the **[?]** button on the main window for a full list of keybindings.
 

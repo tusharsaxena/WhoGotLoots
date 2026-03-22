@@ -1,6 +1,6 @@
 # WhoGotLoots - Module Reference
 
-## WhoGotLoots.lua (Core - 843 lines)
+## WhoGotLoots.lua (Core - 877 lines)
 
 The main entry point. Handles WoW events, parses loot messages, compares items, and orchestrates all user interactions.
 
@@ -74,8 +74,9 @@ Parses slash command arguments, preserving spaces inside item link color codes (
 | Command | Action |
 |---------|--------|
 | `/whogotloots` or `/wgl` | Toggle main window visibility |
-| `/wgl add [itemLink]` | Manually add item (uses current target or player) |
-| `/wgl debug` | Toggle debug mode |
+| `/wgl test [itemLink]` | Inject a test loot item (uses current target or player) |
+| `/wgl debug` | Toggle debug mode (shows debug overlay) |
+| `/wgl help` | Print available commands to chat |
 
 ### Timer Frame
 
@@ -242,7 +243,7 @@ end
 
 ---
 
-## CacheHandler.lua (Async Inspection - 268 lines)
+## CacheHandler.lua (Async Inspection - 353 lines)
 
 Handles asynchronous player gear inspection when item data isn't cached.
 
@@ -298,7 +299,10 @@ Core processing loop. For each `Sent` request:
 
 ### Debug Frame
 
-When `WGLU.DebugMode` is true, displays a 300x200 overlay at TOPLEFT showing all cache requests with unit name, slot, ilvl, and stage. Debug entries expire after 60 seconds.
+When `WGLU.DebugMode` is true, displays a 400x450 overlay centered on screen. The frame is movable (drag with left mouse button) and clamped to screen. Position resets each session. The frame has two sections:
+
+- **Cache Queue** (top): Shows active inspection requests with unit name, slot, ilvl, and stage. Entries expire after 60 seconds.
+- **Debug Log** (bottom, scrollable): Timestamped pipeline debug messages from `WGLU.DebugPrint()`. Capped at 100 entries, auto-scrolls to latest.
 
 ---
 
@@ -401,7 +405,7 @@ All settings save immediately to `WhoGotLootsSavedData`.
 
 ---
 
-## util.lua (Utilities - 200 lines)
+## util.lua (Utilities - 226 lines)
 
 Shared utility functions in the `WGLU` namespace.
 
@@ -444,7 +448,8 @@ Shared utility functions in the `WGLU` namespace.
 | Function | Signature | Description |
 |----------|-----------|-------------|
 | `OverrideEvent(frame, event, newHandler)` | | Chains a new script handler after the existing one |
-| `DebugPrint(message)` | | Prints to chat if `WGLU.DebugMode` is true |
+| `DebugPrint(message)` | | Appends a timestamped message to the debug frame log if `WGLU.DebugMode` is true |
+| `AddDebugLog(line)` | | Appends a line to `WGLU.DebugLog`, caps at 100 entries, updates the debug frame scroll text and auto-scrolls to bottom |
 
 ---
 
