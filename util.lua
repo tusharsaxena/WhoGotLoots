@@ -126,9 +126,8 @@ function WGLU.GetPlayerGUID(playerName)
 end
 
 function WGLU.GetPlayerUnitByGUID(guid)
-  if UnitExists("target") and UnitGUID("target") == guid then
-    return "target"
-  end
+  -- Note: "target" check removed — UnitGUID("target") returns a secret/protected
+  -- value that cannot be compared with addon-tainted strings (causes taint errors).
 
   for i = 1, 4 do
     local unit = "party" .. i
